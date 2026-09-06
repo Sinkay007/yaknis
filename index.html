@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sinkay — Gestion des commandes</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F5F8;
+    --panel:#FFFFFF;
+    --ink:#151B33;
+    --muted:#67708A;
+    --line:#E2E5EE;
+    --brand:#1D4E89;
+    --brand-dark:#123259;
+    --brand-soft:#E7EFF9;
+    --clay:#C1673A;
+    --clay-soft:#F7E9E0;
+    --amber:#A9781F;
+    --amber-soft:#F5EAD4;
+    --rose:#A83A44;
+    --rose-soft:#F5E1E2;
+    --green:#2F7D5D;
+    --green-soft:#E2F0E9;
+    --sidebar-w:232px;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+  }
+  h1,h2,h3,.page-title,.stat-num,.pipeline-num{font-family:"Space Grotesk","Inter",sans-serif;}
+  .app{display:flex;min-height:100vh;}
+  .sidebar{
+    width:var(--sidebar-w);
+    background:var(--brand-dark);
+    background-image:linear-gradient(175deg,#123259 0%,#0D2543 100%);
+    color:#DCE7F5;
+    padding:22px 0 20px;
+    flex-shrink:0;
+  }
+  .sidebar h1{
+    font-size:19px;
+    font-weight:700;
+    margin:0 22px 2px;
+    letter-spacing:.2px;
+    color:#fff;
+  }
+  .sidebar .sub{
+    margin:0 22px 28px;
+    font-size:12px;
+    color:#8DA8CC;
+  }
+  .nav-item{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    padding:11px 22px;
+    font-size:14px;
+    color:#B7C9E3;
+    cursor:pointer;
+    border-left:3px solid transparent;
+    transition:background .12s, color .12s;
+  }
+  .nav-item .ic{font-size:15px;width:18px;text-align:center;opacity:.9;}
+  .nav-item:hover{background:rgba(255,255,255,.05);color:#fff;}
+  .nav-item.active{
+    background:rgba(255,255,255,.08);
+    color:#fff;
+    border-left-color:var(--clay);
+    font-weight:600;
+  }
+  .main{flex:1;padding:30px 34px;max-width:100%;overflow-x:auto;}
+  .page-title{font-size:23px;font-weight:600;margin:0 0 4px;letter-spacing:-.2px;}
+  .page-sub{font-size:13.5px;color:var(--muted);margin:0 0 24px;}
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px;
+    margin-bottom:22px;
+  }
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600;letter-spacing:.1px;}
+  input,select,textarea{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    font-size:14px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--ink);
+    transition:border-color .12s, box-shadow .12s;
+  }
+  input:focus,select:focus,textarea:focus{
+    outline:none;
+    border-color:var(--brand);
+    box-shadow:0 0 0 3px var(--brand-soft);
+  }
+  textarea{resize:vertical;min-height:60px;}
+  .field{margin-bottom:16px;}
+  .btn{
+    display:inline-block;
+    padding:10px 20px;
+    border-radius:7px;
+    border:none;
+    background:var(--brand);
+    color:#fff;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:background .12s, transform .08s;
+  }
+  .btn:hover{background:var(--brand-dark);}
+  .btn:active{transform:translateY(1px);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-outline{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--ink);
+  }
+  .btn-outline:hover{background:#F2F4F8;border-color:#C9CFDC;}
+  .btn-sm{padding:6px 12px;font-size:12.5px;border-radius:6px;}
+  .btn-rose{background:var(--rose);}
+  .btn-rose:hover{background:#8A2E37;}
+  .btn-green{background:var(--green);}
+  .btn-green:hover{background:#25654A;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{
+    text-align:right;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+    color:var(--muted);
+    font-weight:600;
+    padding:11px 12px;
+    border-bottom:1px solid var(--line);
+    white-space:nowrap;
+    background:#FAFBFC;
+  }
+  td{
+    padding:12px 12px;
+    border-bottom:1px solid var(--line);
+    vertical-align:top;
+  }
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:#FAFBFD;}
+  .badge{
+    display:inline-block;
+    padding:4px 11px;
+    border-radius:20px;
+    font-size:11.5px;
+    font-weight:600;
+    white-space:nowrap;
+    letter-spacing:.1px;
+  }
+  .badge-new{background:var(--brand-soft);color:var(--brand);}
+  .badge-amber{background:var(--amber-soft);color:var(--amber);}
+  .badge-green{background:var(--green-soft);color:var(--green);}
+  .badge-rose{background:var(--rose-soft);color:var(--rose);}
+  .badge-muted{background:#EEEFF3;color:var(--muted);}
+  .empty{
+    text-align:center;
+    color:var(--muted);
+    padding:40px 0;
+    font-size:14px;
+  }
+  .toast{
+    position:fixed;
+    bottom:24px;
+    right:24px;
+    background:var(--ink);
+    color:#fff;
+    padding:12px 18px;
+    border-radius:8px;
+    font-size:13.5px;
+    max-width:320px;
+    z-index:999;
+    box-shadow:0 4px 16px rgba(0,0,0,.2);
+  }
+  .toast.error{background:var(--rose);}
+  .toast.success{background:var(--green);}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px;}
+  .stat-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;}
+  .stat-num{font-size:25px;font-weight:600;line-height:1;margin-bottom:7px;color:var(--ink);}
+  .stat-label{font-size:12.5px;color:var(--muted);}
+  .section-label{font-size:13px;font-weight:600;color:var(--ink);margin:28px 0 12px;}
+
+  .pipeline{
+    display:flex;
+    align-items:stretch;
+    background:var(--brand-dark);
+    background-image:linear-gradient(120deg,#123259 0%,#1D4E89 100%);
+    border-radius:12px;
+    padding:26px 28px;
+    margin-bottom:26px;
+    overflow-x:auto;
+    gap:0;
+  }
+  .pipeline-stage{
+    flex:1;
+    min-width:120px;
+    position:relative;
+    padding:0 20px;
+    color:#fff;
+  }
+  .pipeline-stage:not(:last-child)::after{
+    content:"";
+    position:absolute;
+    right:-1px;
+    top:8px;
+    bottom:8px;
+    width:1px;
+    background:rgba(255,255,255,.18);
+  }
+  .pipeline-stage .pipeline-eyebrow{
+    font-size:11.5px;
+    color:#9FC0E4;
+    margin-bottom:8px;
+    font-weight:500;
+  }
+  .pipeline-num{font-size:30px;font-weight:600;line-height:1;margin-bottom:4px;}
+  .pipeline-stage .pipeline-sub{font-size:11.5px;color:#B7CDE8;}
+  .row-actions{display:flex;gap:6px;flex-wrap:wrap;}
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(20,20,20,.45);
+    display:flex;align-items:center;justify-content:center;z-index:1000;
+  }
+  .modal{
+    background:#fff;border-radius:10px;padding:22px;width:360px;max-width:90vw;
+  }
+  .modal h3{margin:0 0 14px;font-size:16px;}
+  .modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+  .filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .filters input,.filters select{width:auto;min-width:140px;}
+  .subtle-link{color:var(--accent);font-size:13px;cursor:pointer;text-decoration:underline;}
+  @media (max-width:800px){
+    .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);transition:.2s;z-index:50;}
+    .sidebar.open{transform:translateX(0);}
+    .main{padding:16px;}
+    .grid-2{grid-template-columns:1fr;}
+    .menu-btn{display:block !important;}
+  }
+  .menu-btn{display:none;background:none;border:none;font-size:22px;cursor:pointer;margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="sidebar" id="sidebar">
+    <h1>Sinkay</h1>
+    <p class="sub">Gestion des commandes</p>
+    <div class="nav-item active" data-page="messages"><span class="ic">📩</span> Messages</div>
+    <div class="nav-item" data-page="confirmation"><span class="ic">✅</span> Confirmation</div>
+    <div class="nav-item" data-page="livraison"><span class="ic">🚚</span> Livraison</div>
+    <div class="nav-item" data-page="facturation"><span class="ic">💰</span> Facturation</div>
+    <div class="nav-item" data-page="dashboard"><span class="ic">📊</span> Dashboard</div>
+    <div class="nav-item" data-page="all-orders"><span class="ic">📋</span> Toutes les commandes</div>
+  </div>
+
+  <div class="main">
+    <button class="menu-btn" id="menuBtn">☰</button>
+    <div id="page-content"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIGURATION — reliée à ton projet Supabase
+// ============================================================
+const SUPABASE_URL = "https://etcberwmksorpboryahe.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0Y2Jlcndta3NvcnBib3J5YWhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2NDIzMzEsImV4cCI6MjEwNDIxODMzMX0.xEXGQDw7m14PpDs4DXPSb24PQwYdXU4ftMH0rF-RNCs";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ============================================================
+// LIBELLÉS (affichage en français)
+// ============================================================
+const SOURCE_LABELS = { WHATSAPP:"WhatsApp", FACEBOOK:"Facebook", INSTAGRAM:"Instagram" };
+
+const STATUS_LABELS = {
+  NEW:"Nouvelle", CONFIRMED:"Confirmée", NO_RESPONSE:"Pas de réponse",
+  VOICEMAIL:"Boîte vocale", FALSE_NUMBER:"Faux numéro", CANCELLED:"Annulée",
+  RAMASSEE:"Ramassée", EN_LIVRAISON:"En livraison", PAS_DE_REPONSE:"Pas de réponse",
+  PREMIER_APPEL:"1er appel", DEUXIEME_APPEL:"2ème appel", TROISIEME_APPEL:"3ème appel",
+  CLIENT_INTERESSE:"Client intéressé", REPORTEE:"Reportée", ANNULEE:"Annulée",
+  LIVREE:"Livrée", REFUSEE:"Refusée"
+};
+
+const STAGE_LABELS = { CONFIRMATION:"Confirmation", DELIVERY:"Livraison", BILLING:"Facturation", CLOSED:"Clôturée" };
+
+const PAYMENT_LABELS = { PAID:"💵 Payée", UNPAID:"⏳ Pas encore payée" };
+
+function badgeClass(status){
+  if (["CONFIRMED","LIVREE"].includes(status)) return "badge-green";
+  if (["FALSE_NUMBER","CANCELLED","ANNULEE","REFUSEE"].includes(status)) return "badge-rose";
+  if (["NO_RESPONSE","VOICEMAIL","REPORTEE","PAS_DE_REPONSE"].includes(status)) return "badge-amber";
+  if (status === "NEW") return "badge-new";
+  if (["RAMASSEE","EN_LIVRAISON","PREMIER_APPEL","DEUXIEME_APPEL","TROISIEME_APPEL","CLIENT_INTERESSE"].includes(status)) return "badge-new";
+  return "badge-muted";
+}
+
+function toast(msg, type=""){
+  const el = document.createElement("div");
+  el.className = "toast " + type;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(()=> el.remove(), 3500);
+}
+
+function fmtDate(d){
+  const dt = new Date(d);
+  return dt.toLocaleDateString("fr-FR") + " " + dt.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+}
+
+function fmtMoney(v){
+  if (v === null || v === undefined) return "—";
+  return Number(v).toFixed(2) + " DH";
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+const pages = {};
+let currentPage = "messages";
+
+document.querySelectorAll(".nav-item").forEach(item=>{
+  item.addEventListener("click", ()=>{
+    document.querySelectorAll(".nav-item").forEach(i=>i.classList.remove("active"));
+    item.classList.add("active");
+    currentPage = item.dataset.page;
+    document.getElementById("sidebar").classList.remove("open");
+    renderPage(currentPage);
+  });
+});
+
+document.getElementById("menuBtn").addEventListener("click", ()=>{
+  document.getElementById("sidebar").classList.toggle("open");
+});
+
+function renderPage(name){
+  const container = document.getElementById("page-content");
+  container.innerHTML = '<p class="empty">Chargement...</p>';
+  pages[name]().then(html=>{ container.innerHTML = html; attachHandlers(name); });
+}
+
+// ============================================================
+// PAGE : TEAM MESSAGES — création de commande
+// ============================================================
+pages.messages = async function(){
+  return `
+    <h2 class="page-title">Team Messages</h2>
+    <p class="page-sub">Créer une nouvelle commande reçue par WhatsApp, Facebook ou Instagram.</p>
+    <div class="card" style="max-width:560px;">
+      <form id="orderForm">
+        <div class="field">
+          <label>Source</label>
+          <select name="source" required>
+            <option value="WHATSAPP">WhatsApp</option>
+            <option value="FACEBOOK">Facebook</option>
+            <option value="INSTAGRAM">Instagram</option>
+          </select>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Nom du client</label>
+            <input name="customer_name" required>
+          </div>
+          <div class="field">
+            <label>Téléphone</label>
+            <input name="customer_phone" required>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Ville</label>
+            <input name="customer_city" required>
+          </div>
+          <div class="field">
+            <label>Adresse</label>
+            <input name="customer_address" required>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Produit</label>
+            <input name="product_name" required>
+          </div>
+          <div class="field">
+            <label>Prix du produit (DH)</label>
+            <input name="product_price" type="number" step="0.01" min="0.01" required>
+          </div>
+        </div>
+        <button type="submit" class="btn" id="submitOrderBtn">Enregistrer la commande</button>
+      </form>
+    </div>
+    <div id="recentCreated"></div>
+  `;
+};
+
+function bindMessagesForm(){
+  const form = document.getElementById("orderForm");
+  if (!form) return;
+  form.addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const btn = document.getElementById("submitOrderBtn");
+    btn.disabled = true;
+    btn.textContent = "Enregistrement...";
+    const fd = new FormData(form);
+    const price = parseFloat(fd.get("product_price"));
+    try{
+      const { data, error } = await sb.rpc("create_order", {
+        p_source: fd.get("source"),
+        p_customer_name: fd.get("customer_name").trim(),
+        p_customer_city: fd.get("customer_city").trim(),
+        p_customer_address: fd.get("customer_address").trim(),
+        p_customer_phone: fd.get("customer_phone").trim(),
+        p_product_name: fd.get("product_name").trim(),
+        p_product_price: price
+      });
+      if (error) throw error;
+      toast("Commande " + data.order_number + " créée avec succès", "success");
+      form.reset();
+    }catch(err){
+      toast("Erreur : " + err.message, "error");
+    }finally{
+      btn.disabled = false;
+      btn.textContent = "Enregistrer la commande";
+    }
+  });
+}
+
+// ============================================================
+// PAGE : TEAM CONFIRMATION
+// ============================================================
+pages.confirmation = async function(){
+  const { data, error } = await sb.from("orders")
+    .select("*")
+    .eq("current_stage","CONFIRMATION")
+    .order("created_at",{ascending:false});
+
+  if (error) return `<p class="empty">Erreur de chargement : ${error.message}</p>`;
+  if (!data.length) return `<h2 class="page-title">Team Confirmation</h2><p class="empty">Aucune commande en attente de confirmation.</p>`;
+
+  const rows = data.map(o=>`
+    <tr>
+      <td><strong>${o.order_number}</strong></td>
+      <td>${fmtDate(o.created_at)}</td>
+      <td>${SOURCE_LABELS[o.source]}</td>
+      <td>${o.customer_name}<br><span style="color:var(--muted);font-size:12px;">${o.customer_phone}</span></td>
+      <td>${o.customer_city}</td>
+      <td>${o.product_name}<br><span style="color:var(--muted);font-size:12px;">${fmtMoney(o.product_price)}</span></td>
+      <td><span class="badge ${badgeClass(o.current_status)}">${STATUS_LABELS[o.current_status]}</span></td>
+      <td>
+        <div class="row-actions">
+          <button class="btn btn-sm btn-green" data-action="confirm" data-id="${o.id}">Confirmée</button>
+          <button class="btn btn-sm btn-outline" data-action="no_response" data-id="${o.id}">Pas de réponse</button>
+          <button class="btn btn-sm btn-outline" data-action="voicemail" data-id="${o.id}">Boîte vocale</button>
+          <button class="btn btn-sm btn-rose" data-action="false_number" data-id="${o.id}">Faux numéro</button>
+          <button class="btn btn-sm btn-rose" data-action="cancelled" data-id="${o.id}">Annulée</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+
+  return `
+    <h2 class="page-title">Team Confirmation</h2>
+    <p class="page-sub">${data.length} commande(s) à traiter.</p>
+    <div class="card" style="overflow-x:auto;padding:0;">
+      <table>
+        <thead><tr>
+          <th>N°</th><th>Date</th><th>Source</th><th>Client</th><th>Ville</th><th>Produit</th><th>Statut</th><th>Actions</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+};
+
+function bindConfirmationActions(){
+  document.querySelectorAll("[data-action]").forEach(btn=>{
+    if (!["confirm","no_response","voicemail","false_number","cancelled"].includes(btn.dataset.action)) return;
+    btn.addEventListener("click", async ()=>{
+      const id = btn.dataset.id;
+      const action = btn.dataset.action;
+      const statusMap = {
+        no_response:"NO_RESPONSE", voicemail:"VOICEMAIL",
+        false_number:"FALSE_NUMBER", cancelled:"CANCELLED"
+      };
+      try{
+        if (action === "confirm"){
+          if (!confirm("Confirmer cette commande ? Elle passera en Livraison.")) return;
+          const { error } = await sb.rpc("confirm_order", { p_order_id: id });
+          if (error) throw error;
+        } else {
+          let comment = null;
+          if (action === "cancelled" || action === "false_number"){
+            comment = prompt("Commentaire (optionnel) :") || null;
+          }
+          const { error } = await sb.rpc("set_confirmation_status", {
+            p_order_id: id, p_new_status: statusMap[action], p_comment: comment
+          });
+          if (error) throw error;
+        }
+        toast("Commande mise à jour", "success");
+        renderPage("confirmation");
+      }catch(err){
+        toast("Erreur : " + err.message, "error");
+      }
+    });
+  });
+}
+
+// ============================================================
+// PAGE : TEAM LIVRAISON
+// ============================================================
+const DELIVERY_STATUSES = [
+  "RAMASSEE","EN_LIVRAISON","PAS_DE_REPONSE","PREMIER_APPEL","DEUXIEME_APPEL",
+  "TROISIEME_APPEL","CLIENT_INTERESSE","REPORTEE","ANNULEE","LIVREE","REFUSEE"
+];
+const COMMENT_REQUIRED = ["REPORTEE","ANNULEE","REFUSEE"];
+
+pages.livraison = async function(){
+  const { data, error } = await sb.from("orders")
+    .select("*")
+    .eq("current_stage","DELIVERY")
+    .order("created_at",{ascending:false});
+
+  if (error) return `<p class="empty">Erreur de chargement : ${error.message}</p>`;
+  if (!data.length) return `<h2 class="page-title">Team Livraison</h2><p class="empty">Aucune commande en cours de livraison.</p>`;
+
+  const options = DELIVERY_STATUSES.map(s=>`<option value="${s}">${STATUS_LABELS[s]}</option>`).join("");
+
+  const rows = data.map(o=>`
+    <tr>
+      <td><strong>${o.order_number}</strong></td>
+      <td>${o.customer_name}<br><span style="color:var(--muted);font-size:12px;">${o.customer_phone}</span></td>
+      <td>${o.customer_city}<br><span style="color:var(--muted);font-size:12px;">${o.customer_address}</span></td>
+      <td>${o.product_name}<br><span style="color:var(--muted);font-size:12px;">${fmtMoney(o.product_price)}</span></td>
+      <td><span class="badge ${badgeClass(o.current_status)}">${STATUS_LABELS[o.current_status]}</span></td>
+      <td>
+        <select class="delivery-select" data-id="${o.id}" style="margin-bottom:6px;">
+          <option value="">Changer le statut...</option>
+          ${options}
+        </select>
+        <button class="btn btn-sm" data-apply-delivery="${o.id}">Appliquer</button>
+      </td>
+    </tr>
+  `).join("");
+
+  return `
+    <h2 class="page-title">Team Livraison</h2>
+    <p class="page-sub">${data.length} commande(s) en livraison.</p>
+    <div class="card" style="overflow-x:auto;padding:0;">
+      <table>
+        <thead><tr>
+          <th>N°</th><th>Client</th><th>Ville / Adresse</th><th>Produit</th><th>Statut</th><th>Action</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+};
+
+function bindLivraisonActions(){
+  document.querySelectorAll("[data-apply-delivery]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = btn.dataset.applyDelivery;
+      const select = document.querySelector(`.delivery-select[data-id="${id}"]`);
+      const status = select.value;
+      if (!status){ toast("Choisis un statut d'abord", "error"); return; }
+
+      let comment = null;
+      if (COMMENT_REQUIRED.includes(status)){
+        comment = prompt("Commentaire obligatoire pour ce statut :");
+        if (!comment || comment.trim().length < 3){
+          toast("Un commentaire valide est obligatoire", "error");
+          return;
+        }
+      } else {
+        comment = prompt("Commentaire (optionnel) :") || null;
+      }
+
+      if (["LIVREE","REFUSEE","ANNULEE"].includes(status)){
+        if (!confirm(`Es-tu sûr de vouloir marquer cette commande comme "${STATUS_LABELS[status]}" ?`)) return;
+      }
+
+      try{
+        const { error } = await sb.rpc("update_delivery_status", {
+          p_order_id: id, p_new_status: status, p_comment: comment
+        });
+        if (error) throw error;
+        toast("Statut mis à jour", "success");
+        renderPage("livraison");
+      }catch(err){
+        toast("Erreur : " + err.message, "error");
+      }
+    });
+  });
+}
+
+// ============================================================
+// PAGE : TEAM FACTURATION
+// ============================================================
+pages.facturation = async function(){
+  const { data, error } = await sb.from("orders")
+    .select("*, billing(*)")
+    .eq("current_stage","BILLING")
+    .order("created_at",{ascending:false});
+
+  if (error) return `<p class="empty">Erreur de chargement : ${error.message}</p>`;
+  if (!data.length) return `<h2 class="page-title">Team Facturation</h2><p class="empty">Aucune commande à facturer.</p>`;
+
+  const rows = data.map(o=>{
+    const b = Array.isArray(o.billing) ? o.billing[0] : o.billing;
+    const isRefusee = o.current_status === "REFUSEE";
+    const deliveryVal = b ? b.delivery_price : (isRefusee ? 10 : "");
+    const profitVal = b && b.net_profit !== null ? b.net_profit : "";
+    const paymentVal = b ? b.payment_status : "UNPAID";
+    return `
+    <tr>
+      <td><strong>${o.order_number}</strong></td>
+      <td>${o.customer_name}</td>
+      <td>${o.customer_city}</td>
+      <td>${o.product_name}<br><span style="color:var(--muted);font-size:12px;">${fmtMoney(o.product_price)}</span></td>
+      <td><span class="badge ${badgeClass(o.current_status)}">${STATUS_LABELS[o.current_status]}</span></td>
+      <td>
+        <input type="number" step="0.01" min="0" class="billing-price" data-id="${o.id}"
+          value="${deliveryVal}" ${isRefusee ? "disabled title='Verrouillé automatiquement pour REFUSEE'" : ""} style="width:90px;">
+      </td>
+      <td>
+        <input type="number" step="0.01" class="billing-profit" data-id="${o.id}" value="${profitVal}" style="width:90px;">
+      </td>
+      <td>
+        <select class="billing-payment" data-id="${o.id}" style="width:150px;">
+          <option value="UNPAID" ${paymentVal==="UNPAID"?"selected":""}>⏳ Pas encore payée</option>
+          <option value="PAID" ${paymentVal==="PAID"?"selected":""}>💵 Payée</option>
+        </select>
+      </td>
+      <td><button class="btn btn-sm" data-save-billing="${o.id}" data-refusee="${isRefusee}">Enregistrer</button></td>
+    </tr>
+  `;
+  }).join("");
+
+  return `
+    <h2 class="page-title">Team Facturation</h2>
+    <p class="page-sub">${data.length} commande(s) à facturer.</p>
+    <div class="card" style="overflow-x:auto;padding:0;">
+      <table>
+        <thead><tr>
+          <th>N°</th><th>Client</th><th>Ville</th><th>Produit</th><th>Statut</th>
+          <th>Prix livraison</th><th>Profit net</th><th>Paiement</th><th></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+};
+
+function bindFacturationActions(){
+  document.querySelectorAll("[data-save-billing]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = btn.dataset.saveBilling;
+      const isRefusee = btn.dataset.refusee === "true";
+      const priceInput = document.querySelector(`.billing-price[data-id="${id}"]`);
+      const profitInput = document.querySelector(`.billing-profit[data-id="${id}"]`);
+      const paymentSelect = document.querySelector(`.billing-payment[data-id="${id}"]`);
+
+      const payload = {
+        p_order_id: id,
+        p_delivery_price: isRefusee ? null : (priceInput.value ? parseFloat(priceInput.value) : null),
+        p_net_profit: profitInput.value ? parseFloat(profitInput.value) : null,
+        p_payment_status: paymentSelect.value
+      };
+      try{
+        const { error } = await sb.rpc("update_billing", payload);
+        if (error) throw error;
+        toast("Facturation enregistrée", "success");
+        renderPage("facturation");
+      }catch(err){
+        toast("Erreur : " + err.message, "error");
+      }
+    });
+  });
+}
+
+// ============================================================
+// PAGE : DASHBOARD
+// ============================================================
+pages.dashboard = async function(){
+  const { data: orders, error: e1 } = await sb.from("orders").select("current_stage,current_status,source,product_price");
+  const { data: billing, error: e2 } = await sb.from("billing").select("delivery_price,net_profit,payment_status");
+
+  if (e1 || e2) return `<p class="empty">Erreur de chargement du dashboard.</p>`;
+
+  const total = orders.length;
+  const inConfirmation = orders.filter(o=>o.current_stage==="CONFIRMATION").length;
+  const confirmed = orders.filter(o=>o.current_status==="CONFIRMED").length;
+  const inDelivery = orders.filter(o=>o.current_stage==="DELIVERY").length;
+  const reported = orders.filter(o=>o.current_status==="REPORTEE").length;
+  const delivered = orders.filter(o=>o.current_status==="LIVREE").length;
+  const refused = orders.filter(o=>o.current_status==="REFUSEE").length;
+  const cancelled = orders.filter(o=>["CANCELLED","ANNULEE"].includes(o.current_status)).length;
+  const closed = orders.filter(o=>o.current_stage==="CLOSED").length;
+
+  const totalPaid = billing.filter(b=>b.payment_status==="PAID").length;
+  const totalUnpaid = billing.filter(b=>b.payment_status==="UNPAID").length;
+  const totalDeliveryCosts = billing.reduce((s,b)=>s+Number(b.delivery_price||0),0);
+  const totalNetProfit = billing.reduce((s,b)=>s+Number(b.net_profit||0),0);
+  const totalDeliveredValue = orders.filter(o=>o.current_status==="LIVREE")
+    .reduce((s,o)=>s+Number(o.product_price||0),0);
+
+  const bySource = {WHATSAPP:0,FACEBOOK:0,INSTAGRAM:0};
+  orders.forEach(o=> bySource[o.source] = (bySource[o.source]||0)+1);
+
+  return `
+    <h2 class="page-title">Dashboard</h2>
+    <p class="page-sub">Statistiques calculées en direct depuis la base de données.</p>
+
+    <div class="pipeline">
+      <div class="pipeline-stage">
+        <div class="pipeline-eyebrow">Confirmation</div>
+        <div class="pipeline-num">${inConfirmation}</div>
+        <div class="pipeline-sub">en attente</div>
+      </div>
+      <div class="pipeline-stage">
+        <div class="pipeline-eyebrow">Confirmées</div>
+        <div class="pipeline-num">${confirmed}</div>
+        <div class="pipeline-sub">prêtes à livrer</div>
+      </div>
+      <div class="pipeline-stage">
+        <div class="pipeline-eyebrow">Livraison</div>
+        <div class="pipeline-num">${inDelivery}</div>
+        <div class="pipeline-sub">en cours</div>
+      </div>
+      <div class="pipeline-stage">
+        <div class="pipeline-eyebrow">Livrées</div>
+        <div class="pipeline-num">${delivered}</div>
+        <div class="pipeline-sub">à facturer / facturées</div>
+      </div>
+      <div class="pipeline-stage">
+        <div class="pipeline-eyebrow">Total</div>
+        <div class="pipeline-num">${total}</div>
+        <div class="pipeline-sub">commandes au total</div>
+      </div>
+    </div>
+
+    <div class="section-label">Vue d'ensemble</div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num">${reported}</div><div class="stat-label">Reportées</div></div>
+      <div class="stat-card"><div class="stat-num">${refused}</div><div class="stat-label">Refusées</div></div>
+      <div class="stat-card"><div class="stat-num">${cancelled}</div><div class="stat-label">Annulées</div></div>
+      <div class="stat-card"><div class="stat-num">${closed}</div><div class="stat-label">Clôturées</div></div>
+    </div>
+
+    <div class="section-label">Facturation</div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num">${totalPaid}</div><div class="stat-label">Total payées</div></div>
+      <div class="stat-card"><div class="stat-num">${totalUnpaid}</div><div class="stat-label">Total non payées</div></div>
+      <div class="stat-card"><div class="stat-num">${fmtMoney(totalDeliveryCosts)}</div><div class="stat-label">Coûts de livraison</div></div>
+      <div class="stat-card"><div class="stat-num">${fmtMoney(totalNetProfit)}</div><div class="stat-label">Profit net total</div></div>
+      <div class="stat-card"><div class="stat-num">${fmtMoney(totalDeliveredValue)}</div><div class="stat-label">Valeur livrée totale</div></div>
+    </div>
+
+    <div class="section-label">Par source</div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num">${bySource.WHATSAPP}</div><div class="stat-label">WhatsApp</div></div>
+      <div class="stat-card"><div class="stat-num">${bySource.FACEBOOK}</div><div class="stat-label">Facebook</div></div>
+      <div class="stat-card"><div class="stat-num">${bySource.INSTAGRAM}</div><div class="stat-label">Instagram</div></div>
+    </div>
+  `;
+};
+
+// ============================================================
+// PAGE : ALL ORDERS
+// ============================================================
+pages["all-orders"] = async function(){
+  const { data, error } = await sb.from("orders")
+    .select("*, billing(payment_status)")
+    .order("created_at",{ascending:false})
+    .limit(200);
+
+  if (error) return `<p class="empty">Erreur de chargement : ${error.message}</p>`;
+
+  const rows = data.map(o=>{
+    const b = Array.isArray(o.billing) ? o.billing[0] : o.billing;
+    return `
+    <tr>
+      <td><strong>${o.order_number}</strong></td>
+      <td>${fmtDate(o.created_at)}</td>
+      <td>${SOURCE_LABELS[o.source]}</td>
+      <td>${o.customer_name}</td>
+      <td>${o.customer_city}</td>
+      <td>${o.customer_phone}</td>
+      <td>${o.product_name}</td>
+      <td>${fmtMoney(o.product_price)}</td>
+      <td>${STAGE_LABELS[o.current_stage]}</td>
+      <td><span class="badge ${badgeClass(o.current_status)}">${STATUS_LABELS[o.current_status]}</span></td>
+      <td>${b ? PAYMENT_LABELS[b.payment_status] : "—"}</td>
+    </tr>
+  `;
+  }).join("");
+
+  return `
+    <h2 class="page-title">Toutes les commandes</h2>
+    <p class="page-sub">${data.length} commande(s) affichée(s) (200 max, les plus récentes).</p>
+    <div class="filters">
+      <input id="searchBox" placeholder="Rechercher : n°, client, téléphone...">
+    </div>
+    <div class="card" style="overflow-x:auto;padding:0;">
+      <table id="allOrdersTable">
+        <thead><tr>
+          <th>N°</th><th>Date</th><th>Source</th><th>Client</th><th>Ville</th><th>Téléphone</th>
+          <th>Produit</th><th>Prix</th><th>Étape</th><th>Statut</th><th>Paiement</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+};
+
+function bindAllOrdersSearch(){
+  const box = document.getElementById("searchBox");
+  if (!box) return;
+  box.addEventListener("input", ()=>{
+    const q = box.value.trim().toLowerCase();
+    document.querySelectorAll("#allOrdersTable tbody tr").forEach(tr=>{
+      tr.style.display = tr.textContent.toLowerCase().includes(q) ? "" : "none";
+    });
+  });
+}
+
+// ============================================================
+// ATTACHER LES HANDLERS SELON LA PAGE
+// ============================================================
+function attachHandlers(name){
+  if (name === "messages") bindMessagesForm();
+  if (name === "confirmation") bindConfirmationActions();
+  if (name === "livraison") bindLivraisonActions();
+  if (name === "facturation") bindFacturationActions();
+  if (name === "all-orders") bindAllOrdersSearch();
+}
+
+// ============================================================
+// DÉMARRAGE
+// ============================================================
+renderPage(currentPage);
+</script>
+</body>
+</html>
