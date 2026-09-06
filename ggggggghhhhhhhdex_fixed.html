@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sinkay — Gestion des commandes</title>
+
+<!-- Supabase UMD: exposed as window.supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#F4F5F8; --panel:#FFFFFF; --ink:#151B33; --muted:#67708A; --line:#E2E5EE;
+  --brand:#1D4E89; --brand-dark:#123259; --brand-soft:#E7EFF9;
+  --amber:#A9781F; --amber-soft:#F5EAD4; --rose:#A83A44; --rose-soft:#F5E1E2;
+  --green:#2F7D5D; --green-soft:#E2F0E9; --sidebar-w:232px; --radius:10px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+h1,h2,.page-title,.stat-num,.pipeline-num{font-family:"Space Grotesk",Inter,sans-serif}
+.app{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);background:linear-gradient(175deg,#123259,#0D2543);color:#DCE7F5;padding:22px 0 20px;flex-shrink:0}
+.sidebar h1{font-size:19px;margin:0 22px 2px;color:#fff}
+.sidebar .sub{margin:0 22px 28px;font-size:12px;color:#8DA8CC}
+.nav-item{display:flex;align-items:center;gap:11px;padding:11px 22px;font-size:14px;color:#B7C9E3;cursor:pointer;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.05);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.08);color:#fff;border-left-color:#C1673A;font-weight:600}
+.main{flex:1;padding:30px 34px;max-width:100%;overflow-x:auto}
+.page-title{font-size:23px;margin:0 0 4px}.page-sub{font-size:13.5px;color:var(--muted);margin:0 0 24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:22px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.field{margin-bottom:16px}
+.btn{display:inline-block;padding:10px 20px;border-radius:7px;border:none;background:var(--brand);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--brand-dark)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-outline{background:transparent;border:1px solid var(--line);color:var(--ink)}.btn-green{background:var(--green)}.btn-rose{background:var(--rose)}
+.btn-sm{padding:6px 12px;font-size:12.5px;border-radius:6px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}th{text-align:right;font-size:11px;text-transform:uppercase;color:var(--muted);padding:11px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:#FAFBFC}td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}tr:hover td{background:#FAFBFD}
+.badge{display:inline-block;padding:4px 11px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.badge-new{background:var(--brand-soft);color:var(--brand)}.badge-amber{background:var(--amber-soft);color:var(--amber)}.badge-green{background:var(--green-soft);color:var(--green)}.badge-rose{background:var(--rose-soft);color:var(--rose)}.badge-muted{background:#EEEFF3;color:var(--muted)}
+.empty{text-align:center;color:var(--muted);padding:40px 0;font-size:14px}.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:#fff;padding:12px 18px;border-radius:8px;font-size:13.5px;max-width:340px;z-index:999}.toast.error{background:var(--rose)}.toast.success{background:var(--green)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px}.stat-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}.stat-num{font-size:25px;font-weight:600;margin-bottom:7px}.stat-label{font-size:12.5px;color:var(--muted)}.section-label{font-size:13px;font-weight:600;margin:28px 0 12px}
+.pipeline{display:flex;background:linear-gradient(120deg,#123259,#1D4E89);border-radius:12px;padding:26px 28px;margin-bottom:26px;overflow-x:auto}.pipeline-stage{flex:1;min-width:120px;position:relative;padding:0 20px;color:#fff}.pipeline-stage:not(:last-child)::after{content:"";position:absolute;right:0;top:8px;bottom:8px;width:1px;background:rgba(255,255,255,.18)}.pipeline-eyebrow{font-size:11.5px;color:#9FC0E4;margin-bottom:8px}.pipeline-num{font-size:30px;font-weight:600}.pipeline-sub{font-size:11.5px;color:#B7CDE8}.row-actions{display:flex;gap:6px;flex-wrap:wrap}.filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}.filters input{width:auto;min-width:260px}
+.menu-btn{display:none;background:none;border:none;font-size:22px;cursor:pointer;margin-bottom:10px}
+@media(max-width:800px){.sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);transition:.2s;z-index:50}.sidebar.open{transform:translateX(0)}.main{padding:16px}.grid-2{grid-template-columns:1fr}.menu-btn{display:block}.pipeline{padding:18px 8px}.pipeline-stage{padding:0 14px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <h1>Sinkay</h1><p class="sub">Gestion des commandes</p>
+    <div class="nav-item active" data-page="messages">📩 <span>Messages</span></div>
+    <div class="nav-item" data-page="confirmation">✅ <span>Confirmation</span></div>
+    <div class="nav-item" data-page="livraison">🚚 <span>Livraison</span></div>
+    <div class="nav-item" data-page="facturation">💰 <span>Facturation</span></div>
+    <div class="nav-item" data-page="dashboard">📊 <span>Dashboard</span></div>
+    <div class="nav-item" data-page="all-orders">📋 <span>Toutes les commandes</span></div>
+  </aside>
+  <main class="main">
+    <button class="menu-btn" id="menuBtn">☰</button>
+    <div id="page-content"></div>
+  </main>
+</div>
+
+<script>
+const SUPABASE_URL="https://etcberwmksorpboryahe.supabase.co";
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0Y2Jlcndta3NvcnBib3J5YWhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2NDIzMzEsImV4cCI6MjEwNDIxODMzMX0.xEXGQDw7m14PpDs4DXPSb24PQwYdXU4ftMH0rF-RNCs";
+
+// Initialisation robuste : l'interface s'affiche même si un aperçu local
+// bloque le chargement de Supabase. Sur Cloudflare, Supabase se connectera normalement.
+let sb = null;
+let supabaseInitError = null;
+
+if (window.supabase && window.supabase.createClient) {
+  try {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch (e) {
+    supabaseInitError = e;
+    console.error("Supabase init error:", e);
+  }
+} else {
+  supabaseInitError = new Error("Supabase non chargé dans cet aperçu");
+}
+
+const sidebar = document.getElementById("sidebar");
+const menuBtn = document.getElementById("menuBtn");
+
+const SOURCE_LABELS={WHATSAPP:"WhatsApp",FACEBOOK:"Facebook",INSTAGRAM:"Instagram"};
+const STATUS_LABELS={NEW:"Nouvelle",CONFIRMED:"Confirmée",NO_RESPONSE:"Pas de réponse",VOICEMAIL:"Boîte vocale",FALSE_NUMBER:"Faux numéro",CANCELLED:"Annulée",RAMASSEE:"Ramassée",EN_LIVRAISON:"En livraison",PAS_DE_REPONSE:"Pas de réponse",PREMIER_APPEL:"1er appel",DEUXIEME_APPEL:"2ème appel",TROISIEME_APPEL:"3ème appel",CLIENT_INTERESSE:"Client intéressé",REPORTEE:"Reportée",ANNULEE:"Annulée",LIVREE:"Livrée",REFUSEE:"Refusée"};
+const STAGE_LABELS={CONFIRMATION:"Confirmation",DELIVERY:"Livraison",BILLING:"Facturation",CLOSED:"Clôturée"};
+const PAYMENT_LABELS={PAID:"💵 Payée",UNPAID:"⏳ Pas encore payée"};
+const DELIVERY_STATUSES=["RAMASSEE","EN_LIVRAISON","PAS_DE_REPONSE","PREMIER_APPEL","DEUXIEME_APPEL","TROISIEME_APPEL","CLIENT_INTERESSE","REPORTEE","ANNULEE","LIVREE","REFUSEE"];
+const COMMENT_REQUIRED=["REPORTEE","ANNULEE","REFUSEE"];
+
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function badgeClass(s){if(["CONFIRMED","LIVREE"].includes(s))return"badge-green";if(["FALSE_NUMBER","CANCELLED","ANNULEE","REFUSEE"].includes(s))return"badge-rose";if(["NO_RESPONSE","VOICEMAIL","REPORTEE","PAS_DE_REPONSE"].includes(s))return"badge-amber";if(["NEW","RAMASSEE","EN_LIVRAISON","PREMIER_APPEL","DEUXIEME_APPEL","TROISIEME_APPEL","CLIENT_INTERESSE"].includes(s))return"badge-new";return"badge-muted"}
+function toast(msg,type=""){const e=document.createElement("div");e.className="toast "+type;e.textContent=msg;document.body.appendChild(e);setTimeout(()=>e.remove(),3500)}
+function fmtDate(d){const x=new Date(d);return x.toLocaleDateString("fr-FR")+" "+x.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}
+function fmtMoney(v){return v===null||v===undefined?"—":Number(v).toFixed(2)+" DH"}
+
+const pages={};let currentPage="messages";
+document.querySelectorAll(".nav-item").forEach(item=>item.addEventListener("click",()=>{
+  document.querySelectorAll(".nav-item").forEach(i=>i.classList.remove("active"));
+  item.classList.add("active");
+  currentPage=item.dataset.page;
+  if(sidebar) sidebar.classList.remove("open");
+  renderPage(currentPage);
+}));
+if(menuBtn && sidebar){
+  menuBtn.addEventListener("click",()=>sidebar.classList.toggle("open"));
+}
+async function renderPage(name){const c=document.getElementById("page-content");c.innerHTML='<p class="empty">Chargement...</p>';try{c.innerHTML=await pages[name]();attachHandlers(name)}catch(e){console.error(e);c.innerHTML='<div class="card"><h2>Erreur</h2><p class="empty">'+esc(e.message||"Erreur inconnue")+'</p></div>'}}
+
+pages.messages=async()=>`<h2 class="page-title">Team Messages</h2><p class="page-sub">Créer une nouvelle commande reçue par WhatsApp, Facebook ou Instagram.</p><div class="card" style="max-width:560px"><form id="orderForm"><div class="field"><label>Source</label><select name="source" required><option value="WHATSAPP">WhatsApp</option><option value="FACEBOOK">Facebook</option><option value="INSTAGRAM">Instagram</option></select></div><div class="grid-2"><div class="field"><label>Nom du client</label><input name="customer_name" required></div><div class="field"><label>Téléphone</label><input name="customer_phone" required></div></div><div class="grid-2"><div class="field"><label>Ville</label><input name="customer_city" required></div><div class="field"><label>Adresse</label><input name="customer_address" required></div></div><div class="grid-2"><div class="field"><label>Produit</label><input name="product_name" required></div><div class="field"><label>Prix du produit (DH)</label><input name="product_price" type="number" step="0.01" min="0.01" required></div></div><button type="submit" class="btn" id="submitOrderBtn">Enregistrer la commande</button></form></div>`;
+
+function bindMessagesForm(){const f=document.getElementById("orderForm");if(!f)return;f.addEventListener("submit",async e=>{e.preventDefault();
+if(!sb){toast("Supabase n'est pas disponible dans cet aperçu local. Ouvre le site déployé sur Cloudflare.","error");return;}
+const b=document.getElementById("submitOrderBtn");b.disabled=true;b.textContent="Enregistrement...";const fd=new FormData(f);try{const {data,error}=await sb.rpc("create_order",{p_source:fd.get("source"),p_customer_name:fd.get("customer_name").trim(),p_customer_city:fd.get("customer_city").trim(),p_customer_address:fd.get("customer_address").trim(),p_customer_phone:fd.get("customer_phone").trim(),p_product_name:fd.get("product_name").trim(),p_product_price:parseFloat(fd.get("product_price"))});if(error)throw error;toast("Commande "+(data?.order_number||"")+" créée avec succès","success");f.reset()}catch(err){toast("Erreur : "+err.message,"error")}finally{b.disabled=false;b.textContent="Enregistrer la commande"}})}
+
+pages.confirmation=async()=>{const {data,error}=await sb.from("orders").select("*").eq("current_stage","CONFIRMATION").order("created_at",{ascending:false});if(error)throw error;if(!data.length)return`<h2 class="page-title">Team Confirmation</h2><p class="empty">Aucune commande en attente de confirmation.</p>`;return`<h2 class="page-title">Team Confirmation</h2><p class="page-sub">${data.length} commande(s) à traiter.</p><div class="card" style="overflow-x:auto;padding:0"><table><thead><tr><th>N°</th><th>Date</th><th>Source</th><th>Client</th><th>Ville</th><th>Produit</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${data.map(o=>`<tr><td><strong>${esc(o.order_number)}</strong></td><td>${fmtDate(o.created_at)}</td><td>${esc(SOURCE_LABELS[o.source]||o.source)}</td><td>${esc(o.customer_name)}<br><small>${esc(o.customer_phone)}</small></td><td>${esc(o.customer_city)}</td><td>${esc(o.product_name)}<br><small>${fmtMoney(o.product_price)}</small></td><td><span class="badge ${badgeClass(o.current_status)}">${esc(STATUS_LABELS[o.current_status]||o.current_status)}</span></td><td><div class="row-actions"><button class="btn btn-sm btn-green" data-action="confirm" data-id="${o.id}">Confirmée</button><button class="btn btn-sm btn-outline" data-action="no_response" data-id="${o.id}">Pas de réponse</button><button class="btn btn-sm btn-outline" data-action="voicemail" data-id="${o.id}">Boîte vocale</button><button class="btn btn-sm btn-rose" data-action="false_number" data-id="${o.id}">Faux numéro</button><button class="btn btn-sm btn-rose" data-action="cancelled" data-id="${o.id}">Annulée</button></div></td></tr>`).join("")}</tbody></table></div>`}
+
+function bindConfirmationActions(){document.querySelectorAll("[data-action]").forEach(btn=>btn.addEventListener("click",async()=>{const id=btn.dataset.id,a=btn.dataset.action,map={no_response:"NO_RESPONSE",voicemail:"VOICEMAIL",false_number:"FALSE_NUMBER",cancelled:"CANCELLED"};try{let error;if(a==="confirm"){if(!confirm("Confirmer cette commande ?"))return;({error}=await sb.rpc("confirm_order",{p_order_id:id}))}else{const comment=["cancelled","false_number"].includes(a)?(prompt("Commentaire (optionnel) :")||null):null;({error}=await sb.rpc("set_confirmation_status",{p_order_id:id,p_new_status:map[a],p_comment:comment}))}if(error)throw error;toast("Commande mise à jour","success");renderPage("confirmation")}catch(e){toast("Erreur : "+e.message,"error")}}))}
+
+pages.livraison=async()=>{const {data,error}=await sb.from("orders").select("*").eq("current_stage","DELIVERY").order("created_at",{ascending:false});if(error)throw error;if(!data.length)return`<h2 class="page-title">Team Livraison</h2><p class="empty">Aucune commande en cours de livraison.</p>`;const options=DELIVERY_STATUSES.map(s=>`<option value="${s}">${STATUS_LABELS[s]}</option>`).join("");return`<h2 class="page-title">Team Livraison</h2><p class="page-sub">${data.length} commande(s) en livraison.</p><div class="card" style="overflow-x:auto;padding:0"><table><thead><tr><th>N°</th><th>Client</th><th>Ville / Adresse</th><th>Produit</th><th>Statut</th><th>Action</th></tr></thead><tbody>${data.map(o=>`<tr><td><strong>${esc(o.order_number)}</strong></td><td>${esc(o.customer_name)}<br><small>${esc(o.customer_phone)}</small></td><td>${esc(o.customer_city)}<br><small>${esc(o.customer_address)}</small></td><td>${esc(o.product_name)}<br><small>${fmtMoney(o.product_price)}</small></td><td><span class="badge ${badgeClass(o.current_status)}">${STATUS_LABELS[o.current_status]}</span></td><td><select class="delivery-select" data-id="${o.id}"><option value="">Changer le statut...</option>${options}</select><button class="btn btn-sm" data-apply-delivery="${o.id}" style="margin-top:6px">Appliquer</button></td></tr>`).join("")}</tbody></table></div>`}
+
+function bindLivraisonActions(){document.querySelectorAll("[data-apply-delivery]").forEach(btn=>btn.addEventListener("click",async()=>{const id=btn.dataset.applyDelivery,status=document.querySelector(`.delivery-select[data-id="${id}"]`).value;if(!status)return toast("Choisis un statut d'abord","error");let comment=null;if(COMMENT_REQUIRED.includes(status)){comment=prompt("Commentaire obligatoire :");if(!comment||comment.trim().length<3)return toast("Un commentaire valide est obligatoire","error")}else comment=prompt("Commentaire (optionnel) :")||null;try{const {error}=await sb.rpc("update_delivery_status",{p_order_id:id,p_new_status:status,p_comment:comment});if(error)throw error;toast("Statut mis à jour","success");renderPage("livraison")}catch(e){toast("Erreur : "+e.message,"error")}}))}
+
+pages.facturation=async()=>{const {data,error}=await sb.from("orders").select("*, billing(*)").eq("current_stage","BILLING").order("created_at",{ascending:false});if(error)throw error;if(!data.length)return`<h2 class="page-title">Team Facturation</h2><p class="empty">Aucune commande à facturer.</p>`;return`<h2 class="page-title">Team Facturation</h2><p class="page-sub">${data.length} commande(s) à facturer.</p><div class="card" style="overflow-x:auto;padding:0"><table><thead><tr><th>N°</th><th>Client</th><th>Produit</th><th>Statut</th><th>Livraison</th><th>Profit net</th><th>Paiement</th><th></th></tr></thead><tbody>${data.map(o=>{const b=Array.isArray(o.billing)?o.billing[0]:o.billing,ref=o.current_status==="REFUSEE";return`<tr><td><strong>${esc(o.order_number)}</strong></td><td>${esc(o.customer_name)}</td><td>${esc(o.product_name)}</td><td>${STATUS_LABELS[o.current_status]}</td><td><input class="billing-price" data-id="${o.id}" type="number" step="0.01" value="${b?.delivery_price??(ref?10:"")}" ${ref?"disabled":""}></td><td><input class="billing-profit" data-id="${o.id}" type="number" step="0.01" value="${b?.net_profit??""}"></td><td><select class="billing-payment" data-id="${o.id}"><option value="UNPAID" ${b?.payment_status!=="PAID"?"selected":""}>⏳ Pas encore payée</option><option value="PAID" ${b?.payment_status==="PAID"?"selected":""}>💵 Payée</option></select></td><td><button class="btn btn-sm" data-save-billing="${o.id}" data-refusee="${ref}">Enregistrer</button></td></tr>`}).join("")}</tbody></table></div>`}
+
+function bindFacturationActions(){document.querySelectorAll("[data-save-billing]").forEach(btn=>btn.addEventListener("click",async()=>{const id=btn.dataset.saveBilling,ref=btn.dataset.refusee==="true",p=document.querySelector(`.billing-price[data-id="${id}"]`),n=document.querySelector(`.billing-profit[data-id="${id}"]`),pay=document.querySelector(`.billing-payment[data-id="${id}"]`);try{const {error}=await sb.rpc("update_billing",{p_order_id:id,p_delivery_price:ref?null:(p.value?parseFloat(p.value):null),p_net_profit:n.value?parseFloat(n.value):null,p_payment_status:pay.value});if(error)throw error;toast("Facturation enregistrée","success");renderPage("facturation")}catch(e){toast("Erreur : "+e.message,"error")}}))}
+
+pages.dashboard=async()=>{const [{data:orders,error:e1},{data:billing,error:e2}]=await Promise.all([sb.from("orders").select("current_stage,current_status,source,product_price"),sb.from("billing").select("delivery_price,net_profit,payment_status")]);if(e1||e2)throw(e1||e2);const n=s=>orders.filter(o=>o.current_status===s).length,stage=s=>orders.filter(o=>o.current_stage===s).length,by={WHATSAPP:0,FACEBOOK:0,INSTAGRAM:0};orders.forEach(o=>by[o.source]=(by[o.source]||0)+1);const cost=billing.reduce((x,b)=>x+Number(b.delivery_price||0),0),profit=billing.reduce((x,b)=>x+Number(b.net_profit||0),0),delval=orders.filter(o=>o.current_status==="LIVREE").reduce((x,o)=>x+Number(o.product_price||0),0);return`<h2 class="page-title">Dashboard</h2><p class="page-sub">Statistiques calculées en direct depuis la base de données.</p><div class="pipeline">${[["Confirmation",stage("CONFIRMATION"),"en attente"],["Confirmées",n("CONFIRMED"),"prêtes à livrer"],["Livraison",stage("DELIVERY"),"en cours"],["Livrées",n("LIVREE"),"à facturer"],["Total",orders.length,"commandes"]].map(x=>`<div class="pipeline-stage"><div class="pipeline-eyebrow">${x[0]}</div><div class="pipeline-num">${x[1]}</div><div class="pipeline-sub">${x[2]}</div></div>`).join("")}</div><div class="section-label">Vue d'ensemble</div><div class="stat-grid">${[["Reportées",n("REPORTEE")],["Refusées",n("REFUSEE")],["Annulées",n("CANCELLED")+n("ANNULEE")],["Clôturées",stage("CLOSED")]].map(x=>`<div class="stat-card"><div class="stat-num">${x[1]}</div><div class="stat-label">${x[0]}</div></div>`).join("")}</div><div class="section-label">Facturation</div><div class="stat-grid">${[["Total payées",billing.filter(b=>b.payment_status==="PAID").length],["Total non payées",billing.filter(b=>b.payment_status==="UNPAID").length],["Coûts de livraison",fmtMoney(cost)],["Profit net total",fmtMoney(profit)],["Valeur livrée totale",fmtMoney(delval)]].map(x=>`<div class="stat-card"><div class="stat-num">${x[1]}</div><div class="stat-label">${x[0]}</div></div>`).join("")}</div><div class="section-label">Par source</div><div class="stat-grid">${Object.entries(by).map(([k,v])=>`<div class="stat-card"><div class="stat-num">${v}</div><div class="stat-label">${SOURCE_LABELS[k]||k}</div></div>`).join("")}</div>`}
+
+pages["all-orders"]=async()=>{const {data,error}=await sb.from("orders").select("*, billing(payment_status)").order("created_at",{ascending:false}).limit(200);if(error)throw error;return`<h2 class="page-title">Toutes les commandes</h2><p class="page-sub">${data.length} commande(s) affichée(s).</p><div class="filters"><input id="searchBox" placeholder="Rechercher : n°, client, téléphone..."></div><div class="card" style="overflow-x:auto;padding:0"><table id="allOrdersTable"><thead><tr><th>N°</th><th>Date</th><th>Source</th><th>Client</th><th>Ville</th><th>Téléphone</th><th>Produit</th><th>Prix</th><th>Étape</th><th>Statut</th><th>Paiement</th></tr></thead><tbody>${data.map(o=>{const b=Array.isArray(o.billing)?o.billing[0]:o.billing;return`<tr><td><strong>${esc(o.order_number)}</strong></td><td>${fmtDate(o.created_at)}</td><td>${esc(SOURCE_LABELS[o.source]||o.source)}</td><td>${esc(o.customer_name)}</td><td>${esc(o.customer_city)}</td><td>${esc(o.customer_phone)}</td><td>${esc(o.product_name)}</td><td>${fmtMoney(o.product_price)}</td><td>${esc(STAGE_LABELS[o.current_stage]||o.current_stage)}</td><td><span class="badge ${badgeClass(o.current_status)}">${esc(STATUS_LABELS[o.current_status]||o.current_status)}</span></td><td>${b?PAYMENT_LABELS[b.payment_status]:"—"}</td></tr>`}).join("")}</tbody></table></div>`}
+function bindAllOrdersSearch(){const box=document.getElementById("searchBox");if(box)box.addEventListener("input",()=>{const q=box.value.toLowerCase();document.querySelectorAll("#allOrdersTable tbody tr").forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none")})}
+function attachHandlers(n){if(n==="messages")bindMessagesForm();if(n==="confirmation")bindConfirmationActions();if(n==="livraison")bindLivraisonActions();if(n==="facturation")bindFacturationActions();if(n==="all-orders")bindAllOrdersSearch()}
+renderPage(currentPage);
+</script>
+</body>
+</html>
